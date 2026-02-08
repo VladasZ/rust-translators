@@ -1,11 +1,10 @@
 use crate::translators::translator;
 use html_escape::decode_html_entities;
 use regex::Regex;
-use reqwest::Proxy;
-use reqwest::blocking::Client as ClientSync;
+use reqwest::{Client, Proxy};
 use urlencoding::encode;
 
-pub fn send_sync_request(
+pub async fn send_request(
     target_language: &str,
     source_language: &str,
     text: &str,
@@ -13,7 +12,7 @@ pub fn send_sync_request(
     proxy_address: Option<&str>,
 ) -> Result<String, translator::Error> {
     // client build
-    let mut client = ClientSync::builder();
+    let mut client = Client::builder();
     // proxy
     if let Some(proxy_address) = proxy_address {
         let proxy = Proxy::all(proxy_address)?;
@@ -26,8 +25,9 @@ pub fn send_sync_request(
     let response = client
         .get(&url)
         .timeout(std::time::Duration::from_secs(timeout as u64))
-        .send()?;
-    let result_html = response.text()?;
+        .send()
+        .await?;
+    let result_html = response.text().await?;
 
     get_translated_text(&result_html)
 }

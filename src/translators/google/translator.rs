@@ -1,4 +1,4 @@
-use crate::translators::google::requests::send_sync_request;
+use crate::translators::google::requests::send_request;
 use crate::translators::translator;
 
 use macon::Builder;
@@ -83,7 +83,7 @@ pub struct GoogleTranslator {
 }
 
 impl translator::Translator for GoogleTranslator {
-    fn translate_sync(
+    async fn translate(
         &self,
         text: &str,
         source_language: &str,
@@ -93,13 +93,14 @@ impl translator::Translator for GoogleTranslator {
         let chunks = split_chunks(text, self.text_limit);
         for chunk in chunks {
             let chunk_str = &text[chunk.start..chunk.end];
-            let translated_chunk = send_sync_request(
+            let translated_chunk = send_request(
                 &target_language,
                 &source_language,
                 chunk_str,
                 self.timeout,
                 self.proxy_address.as_deref(),
-            )?;
+            )
+            .await?;
 
             if self.delay > 0 {
                 std::thread::sleep(Duration::from_millis(self.delay as u64));

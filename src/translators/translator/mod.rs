@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::str::Utf8Error;
 
 pub trait Translator: Clone + Default + Debug + Send + Sync {
-    fn translate_sync(
+    async fn translate(
         &self,
         text: &str,
         target_language: &str,

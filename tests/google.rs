@@ -1,14 +1,16 @@
+#![cfg(test)]
+
 use translators::GoogleTranslator;
 use translators::Translator;
 
-#[test]
-fn test_sync() {
+#[tokio::test]
+async fn test_sync() {
     let translator = GoogleTranslator::default();
     let text = "Hello, world!";
     let source_lang = "en";
     let target_lang = "fr";
 
-    match translator.translate_sync(text, source_lang, target_lang) {
+    match translator.translate(text, source_lang, target_lang).await {
         Ok(result) => {
             assert_eq!(result, "Bonjour le monde!");
         }
@@ -19,8 +21,8 @@ fn test_sync() {
     }
 }
 
-#[test]
-fn test_sync_builder() {
+#[tokio::test]
+async fn test_sync_builder() {
     let translator = GoogleTranslator::builder()
         .timeout(35usize)
         .delay(0usize)
@@ -31,7 +33,7 @@ fn test_sync_builder() {
     let source_lang = "en";
     let target_lang = "fr";
 
-    match translator.translate_sync(text, source_lang, target_lang) {
+    match translator.translate(text, source_lang, target_lang).await {
         Ok(result) => {
             assert_eq!(result, "Bonjour le monde!");
         }
