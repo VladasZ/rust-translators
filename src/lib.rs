@@ -21,5 +21,4 @@ mod translators;
 pub use translators::translator::Error;
 pub use translators::translator::Translator;
 
-#[cfg(feature = "google")]
 pub use translators::google::translator::GoogleTranslator;

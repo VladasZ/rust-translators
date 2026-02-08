@@ -1,18 +1,8 @@
 use std::fmt;
 use std::fmt::Debug;
 use std::str::Utf8Error;
-#[cfg(feature = "tokio-async")]
-use tokio::task::JoinError;
 
 pub trait Translator: Clone + Default + Debug + Send + Sync {
-    #[cfg(feature = "tokio-async")]
-    async fn translate_async(
-        &self,
-        text: &str,
-        target_language: &str,
-        source_language: &str,
-    ) -> Result<String, Error>;
-
     fn translate_sync(
         &self,
         text: &str,
@@ -33,8 +23,6 @@ pub enum Error {
     Encoding(String),
     Captcha(String),
     InvalidRequest(String),
-    #[cfg(feature = "tokio-async")]
-    JoinTask(String),
     Uknown(String),
 }
 
@@ -43,18 +31,16 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::Builder(ref e) => write!(f, "Builder error: {}", e),
-            Error::Redirect(ref e) => write!(f, "Redirect error: {}", e),
-            Error::Status(ref e) => write!(f, "Status error: {}", e),
-            Error::Timeout(ref e) => write!(f, "Timeout error: {}", e),
-            Error::ConnectFailed(ref e) => write!(f, "ConnectFailed error: {}", e),
-            Error::DecodeBody(ref e) => write!(f, "Body decoding error: {}", e),
-            Error::Captcha(ref e) => write!(f, "Captcha: {}", e),
-            Error::Encoding(ref e) => write!(f, "Encoding error: {}", e),
-            Error::InvalidRequest(ref e) => write!(f, "Invalid request: {}", e),
-            #[cfg(feature = "tokio-async")]
-            Error::JoinTask(ref e) => write!(f, "Tokio join task error: {}", e),
-            Error::Uknown(ref e) => write!(f, "Unknown error: {}", e),
+            Error::Builder(e) => write!(f, "Builder error: {}", e),
+            Error::Redirect(e) => write!(f, "Redirect error: {}", e),
+            Error::Status(e) => write!(f, "Status error: {}", e),
+            Error::Timeout(e) => write!(f, "Timeout error: {}", e),
+            Error::ConnectFailed(e) => write!(f, "ConnectFailed error: {}", e),
+            Error::DecodeBody(e) => write!(f, "Body decoding error: {}", e),
+            Error::Captcha(e) => write!(f, "Captcha: {}", e),
+            Error::Encoding(e) => write!(f, "Encoding error: {}", e),
+            Error::InvalidRequest(e) => write!(f, "Invalid request: {}", e),
+            Error::Uknown(e) => write!(f, "Unknown error: {}", e),
         }
     }
 }
@@ -84,12 +70,5 @@ impl From<reqwest::Error> for Error {
 impl From<Utf8Error> for Error {
     fn from(e: Utf8Error) -> Self {
         Error::Encoding(e.to_string())
-    }
-}
-
-#[cfg(feature = "tokio-async")]
-impl From<JoinError> for Error {
-    fn from(e: JoinError) -> Self {
-        Error::JoinTask(e.to_string())
     }
 }

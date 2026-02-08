@@ -1,14 +1,8 @@
-#[cfg(feature = "tokio-async")]
-use crate::translators::google::requests::send_async_request;
 use crate::translators::google::requests::send_sync_request;
 use crate::translators::translator;
 
 use macon::Builder;
-#[cfg(feature = "tokio-async")]
-use std::sync::Arc;
 use std::time::Duration;
-#[cfg(feature = "tokio-async")]
-use tokio::sync::Semaphore;
 /// Google Translate.
 ///
 /// # Dependencies:
@@ -83,79 +77,12 @@ pub struct GoogleTranslator {
     pub delay: usize,
     /// Proxy address for reqwest.
     pub proxy_address: Option<String>,
-    #[cfg(feature = "tokio-async")]
-    /// How many requests can be handled concurrently.
-    pub max_concurrency: Option<usize>,
     /// Limits on the maximum number of chars.
     /// Set if the translator has changed their limits.
     pub text_limit: usize,
 }
 
 impl translator::Translator for GoogleTranslator {
-    #[cfg(feature = "tokio-async")]
-    async fn translate_async(
-        &self,
-        text: &str,
-        source_language: &str,
-        target_language: &str,
-    ) -> Result<String, translator::Error> {
-        let mut result = String::new();
-        let mut tasks = Vec::new();
-        let semaphore = self
-            .max_concurrency
-            .map(|max| Arc::new(Semaphore::new(max)));
-        let chunks = split_chunks(text, self.text_limit);
-        for chunk in chunks {
-            let chunk_str = &text[chunk.start..chunk.end];
-            let target_language = &target_language;
-            let source_language = &source_language;
-            let proxy_address = &self.proxy_address;
-            let timeout = self.timeout;
-            let semaphore = semaphore.clone();
-
-            let task = async move {
-                let _permit = match &semaphore {
-                    Some(sem) => Some(sem.acquire().await.unwrap()),
-                    None => None,
-                };
-
-                send_async_request(
-                    &target_language,
-                    &source_language,
-                    &chunk_str,
-                    timeout,
-                    proxy_address.as_deref(),
-                )
-                .await
-            };
-
-            tasks.push(task);
-        }
-
-        // send sequential req with a delay
-        if self.delay > 0 {
-            for task in tasks {
-                match task.await {
-                    Ok(translated_chunk) => result.push_str(&translated_chunk),
-                    Err(e) => return Err(e),
-                }
-                tokio::time::sleep(Duration::from_millis(self.delay as u64)).await;
-            }
-        // send all req at once
-        } else {
-            let results = futures::future::join_all(tasks).await;
-
-            for res in results {
-                match res {
-                    Ok(translated_chunk) => result.push_str(&translated_chunk),
-                    Err(e) => return Err(e),
-                }
-            }
-        }
-
-        Ok(result)
-    }
-
     fn translate_sync(
         &self,
         text: &str,
@@ -163,7 +90,6 @@ impl translator::Translator for GoogleTranslator {
         target_language: &str,
     ) -> Result<String, translator::Error> {
         let mut result = String::new();
-        let mut start = 0;
         let chunks = split_chunks(text, self.text_limit);
         for chunk in chunks {
             let chunk_str = &text[chunk.start..chunk.end];
@@ -192,8 +118,6 @@ impl Default for GoogleTranslator {
             timeout: 35,
             delay: 0,
             proxy_address: None,
-            #[cfg(feature = "tokio-async")]
-            max_concurrency: None,
             text_limit: 5000,
         }
     }
